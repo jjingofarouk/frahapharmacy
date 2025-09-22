@@ -1,167 +1,278 @@
+'use client';
+
+import { useQuery } from '@tanstack/react-query';
+import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
-import { PrismaClient } from '@prisma/client';
+import { Shield, Heart, Clock, CheckCircle } from 'lucide-react';
 import ProductCard from '@components/ProductCard';
-import { Shield, Heart, Clock, CheckCircle, Users, Award } from 'lucide-react';
+import Skeleton from 'react-loading-skeleton';
+import 'react-loading-skeleton/dist/skeleton.css';
 
-const prisma = new PrismaClient();
+async function getProducts() {
+  const res = await fetch('http://localhost:3000/api/products?limit=6', { cache: 'no-store' });
+  if (!res.ok) throw new Error('Failed to fetch products');
+  return res.json(); // { products: [...] }
+}
 
-export default async function Home() {
-  const products = await prisma.product.findMany({
-    include: { categories: { include: { category: true } } },
-    take: 6,
+export default function Home() {
+  const { data, isLoading } = useQuery({
+    queryKey: ['featured-products'],
+    queryFn: getProducts,
+    staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
-  const formattedProducts = products.map(product => ({
-    ...product,
-    categories: product.categories.map(pc => pc.category),
-  }));
+  const products = data?.products || [];
 
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
-      <section className="bg-primary-blue text-white">
-        <div className="container-max section-padding">
+      <motion.section
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.8 }}
+        className="bg-gradient-to-r from-primary-blue to-blue-600 text-white"
+      >
+        <div className="container mx-auto px-4 py-16 md:py-24">
           <div className="grid md:grid-cols-2 gap-12 items-center">
-            <div>
-              <h1 className="text-5xl font-bold mb-6 leading-tight">
+            <motion.div
+              initial={{ opacity: 0, x: -50 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.6, delay: 0.2 }}
+            >
+              <h1 className="text-5xl md:text-6xl font-bold mb-6 leading-tight">
                 Welcome to <span className="text-accent-blue">Fraha Pharmacy</span>
               </h1>
-              <p className="text-xl mb-8 text-blue-100 leading-relaxed">
-                Your trusted healthcare partner providing quality medications and professional pharmaceutical services with care you can count on.
+              <p className="text-xl md:text-2xl mb-8 text-blue-100 leading-relaxed">
+                Your trusted healthcare partner delivering quality medications and expert care with a personal touch.
               </p>
               <div className="flex flex-col sm:flex-row gap-4">
-                <Link href="/products" className="btn-primary inline-block text-center">
-                  Browse Products
-                </Link>
-                <Link href="/contact" className="bg-transparent border-2 border-white text-white hover:bg-white hover:text-primary-blue font-medium py-3 px-6 rounded-lg transition-colors duration-200">
-                  Contact Us
-                </Link>
+                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                  <Link href="/products" className="btn-primary inline-block text-center px-8 py-4 text-lg">
+                    Browse Products
+                  </Link>
+                </motion.div>
+                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                  <Link
+                    href="/contact"
+                    className="bg-transparent border-2 border-white text-white hover:bg-white hover:text-primary-blue font-medium py-4 px-8 text-lg rounded-lg transition-colors duration-200"
+                  >
+                    Contact Us
+                  </Link>
+                </motion.div>
               </div>
-            </div>
-            <div className="relative">
-              <div className="bg-accent-blue/20 rounded-2xl p-8 backdrop-blur-sm">
+            </motion.div>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.6, delay: 0.4 }}
+              className="relative"
+            >
+              <div className="bg-accent-blue/20 rounded-2xl p-8 backdrop-blur-sm shadow-lg">
                 <div className="text-center space-y-4">
                   <Shield size={64} className="mx-auto text-accent-blue" />
                   <h3 className="text-2xl font-semibold">Licensed & Trusted</h3>
-                  <p className="text-blue-100">Fully licensed pharmacy with qualified pharmacists</p>
+                  <p className="text-blue-100">Fully licensed pharmacy with certified pharmacists</p>
                 </div>
               </div>
-            </div>
+            </motion.div>
           </div>
         </div>
-      </section>
+      </motion.section>
 
       {/* Features Section */}
-      <section className="bg-neutral-gray">
-        <div className="container-max section-padding">
-          <div className="text-center mb-16">
+      <motion.section
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.8, delay: 0.2 }}
+        className="bg-neutral-gray"
+      >
+        <div className="container mx-auto px-4 py-16">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="text-center mb-16"
+          >
             <h2 className="text-4xl font-bold text-text-dark mb-4">Why Choose Fraha Pharmacy?</h2>
             <p className="text-xl text-text-muted max-w-2xl mx-auto">
-              We're committed to providing exceptional pharmaceutical care with the highest standards of service.
+              Exceptional pharmaceutical care with a commitment to quality and service.
             </p>
-          </div>
-          
+          </motion.div>
           <div className="grid md:grid-cols-3 gap-8">
-            <div className="text-center p-8 bg-white rounded-xl shadow-soft hover:shadow-medium transition-shadow duration-200">
-              <div className="w-16 h-16 bg-light-green rounded-full flex items-center justify-center mx-auto mb-6">
-                <Heart size={32} className="text-success-green" />
-              </div>
-              <h3 className="text-2xl font-semibold text-text-dark mb-4">Professional Care</h3>
-              <p className="text-text-muted leading-relaxed">
-                Our qualified pharmacists provide expert consultation and personalized healthcare advice.
-              </p>
-            </div>
-
-            <div className="text-center p-8 bg-white rounded-xl shadow-soft hover:shadow-medium transition-shadow duration-200">
-              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                <Clock size={32} className="text-primary-blue" />
-              </div>
-              <h3 className="text-2xl font-semibold text-text-dark mb-4">Quick Service</h3>
-              <p className="text-text-muted leading-relaxed">
-                Fast prescription filling and efficient service to get you the medications you need quickly.
-              </p>
-            </div>
-
-            <div className="text-center p-8 bg-white rounded-xl shadow-soft hover:shadow-medium transition-shadow duration-200">
-              <div className="w-16 h-16 bg-light-green rounded-full flex items-center justify-center mx-auto mb-6">
-                <CheckCircle size={32} className="text-success-green" />
-              </div>
-              <h3 className="text-2xl font-semibold text-text-dark mb-4">Quality Assured</h3>
-              <p className="text-text-muted leading-relaxed">
-                All medications sourced from verified suppliers with proper storage and handling protocols.
-              </p>
-            </div>
+            {[
+              {
+                icon: <Heart size={32} className="text-success-green" />,
+                title: 'Professional Care',
+                desc: 'Expert consultation and personalized healthcare advice from qualified pharmacists.',
+              },
+              {
+                icon: <Clock size={32} className="text-primary-blue" />,
+                title: 'Quick Service',
+                desc: 'Fast prescription filling and efficient service to meet your needs.',
+              },
+              {
+                icon: <CheckCircle size={32} className="text-success-green" />,
+                title: 'Quality Assured',
+                desc: 'Medications sourced from verified suppliers with strict quality controls.',
+              },
+            ].map((feature, index) => (
+              <motion.div
+                key={feature.title}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.2 + index * 0.2 }}
+                whileHover={{ scale: 1.03, boxShadow: '0 10px 20px rgba(0,0,0,0.1)' }}
+                className="text-center p-8 bg-white rounded-xl shadow-soft"
+              >
+                <div className="w-16 h-16 bg-light-green rounded-full flex items-center justify-center mx-auto mb-6">
+                  {feature.icon}
+                </div>
+                <h3 className="text-2xl font-semibold text-text-dark mb-4">{feature.title}</h3>
+                <p className="text-text-muted leading-relaxed">{feature.desc}</p>
+              </motion.div>
+            ))}
           </div>
         </div>
-      </section>
+      </motion.section>
 
       {/* Featured Products */}
-      <section className="bg-white">
-        <div className="container-max section-padding">
-          <div className="text-center mb-16">
+      <motion.section
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.8, delay: 0.4 }}
+        className="bg-white"
+      >
+        <div className="container mx-auto px-4 py-16">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="text-center mb-16"
+          >
             <h2 className="text-4xl font-bold text-text-dark mb-4">Featured Products</h2>
             <p className="text-xl text-text-muted max-w-2xl mx-auto">
               Discover our most popular healthcare products and medications.
             </p>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
-            {formattedProducts.map(product => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-          </div>
-          
-          <div className="text-center">
-            <Link href="/products" className="btn-primary inline-block">
+          </motion.div>
+          <AnimatePresence mode="wait">
+            {isLoading ? (
+              <motion.div
+                key="loading"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12"
+              >
+                {Array(6)
+                  .fill()
+                  .map((_, i) => (
+                    <Skeleton key={i} height={300} className="rounded-xl" />
+                  ))}
+              </motion.div>
+            ) : (
+              <motion.div
+                key="products"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12"
+              >
+                {products.map((product, index) => (
+                  <motion.div
+                    key={product.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.1 }}
+                    whileHover={{ scale: 1.02 }}
+                  >
+                    <ProductCard product={product} />
+                  </motion.div>
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
+          <motion.div
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            className="text-center"
+          >
+            <Link href="/products" className="btn-primary inline-block px-8 py-4 text-lg">
               View All Products
             </Link>
-          </div>
+          </motion.div>
         </div>
-      </section>
+      </motion.section>
 
       {/* Stats Section */}
-      <section className="bg-primary-blue text-white">
-        <div className="container-max section-padding">
+      <motion.section
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.8, delay: 0.6 }}
+        className="bg-gradient-to-r from-primary-blue to-blue-600 text-white"
+      >
+        <div className="container mx-auto px-4 py-16">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
-            <div>
-              <div className="text-4xl font-bold text-accent-blue mb-2">10+</div>
-              <div className="text-blue-100">Years of Experience</div>
-            </div>
-            <div>
-              <div className="text-4xl font-bold text-accent-blue mb-2">5000+</div>
-              <div className="text-blue-100">Happy Customers</div>
-            </div>
-            <div>
-              <div className="text-4xl font-bold text-accent-blue mb-2">1000+</div>
-              <div className="text-blue-100">Products Available</div>
-            </div>
-            <div>
-              <div className="text-4xl font-bold text-accent-blue mb-2">24/7</div>
-              <div className="text-blue-100">Customer Support</div>
-            </div>
+            {[
+              { value: '10+', label: 'Years of Experience' },
+              { value: '5000+', label: 'Happy Customers' },
+              { value: '1000+', label: 'Products Available' },
+              { value: '24/7', label: 'Customer Support' },
+            ].map((stat, index) => (
+              <motion.div
+                key={stat.label}
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.8 + index * 0.2 }}
+              >
+                <div className="text-4xl font-bold text-accent-blue mb-2">{stat.value}</div>
+                <div className="text-blue-100">{stat.label}</div>
+              </motion.div>
+            ))}
           </div>
         </div>
-      </section>
+      </motion.section>
 
       {/* CTA Section */}
-      <section className="bg-light-green">
-        <div className="container-max section-padding text-center">
-          <h2 className="text-4xl font-bold text-text-dark mb-6">
+      <motion.section
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.8, delay: 0.8 }}
+        className="bg-light-green"
+      >
+        <div className="container mx-auto px-4 py-16 text-center">
+          <motion.h2
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="text-4xl font-bold text-text-dark mb-6"
+          >
             Ready to Experience Better Healthcare?
-          </h2>
-          <p className="text-xl text-text-muted mb-8 max-w-2xl mx-auto">
-            Visit Fraha Pharmacy today and discover why thousands of customers trust us with their healthcare needs.
-          </p>
+          </motion.h2>
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+            className="text-xl text-text-muted mb-8 max-w-2xl mx-auto"
+          >
+            Visit Fraha Pharmacy today and discover why thousands trust us with their healthcare needs.
+          </motion.p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link href="/products" className="btn-secondary inline-block">
-              Shop Now
-            </Link>
-            <Link href="/about" className="bg-white text-text-dark hover:bg-gray-50 font-medium py-3 px-6 rounded-lg transition-colors duration-200 border border-border-light">
-              Learn More
-            </Link>
+            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+              <Link href="/products" className="btn-secondary inline-block px-8 py-4 text-lg">
+                Shop Now
+              </Link>
+            </motion.div>
+            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+              <Link
+                href="/about"
+                className="bg-white text-text-dark hover:bg-gray-50 font-medium py-4 px-8 text-lg rounded-lg transition-colors duration-200 border border-border-light"
+              >
+                Learn More
+              </Link>
+            </motion.div>
           </div>
         </div>
-      </section>
+      </motion.section>
     </div>
   );
 }
