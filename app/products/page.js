@@ -1,8 +1,6 @@
-// app/products/page.jsx
 'use client';
 
 import { useState, useEffect, Suspense } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useForm } from 'react-hook-form';
@@ -10,15 +8,6 @@ import { Search, Filter, Grid, List } from 'lucide-react';
 import Skeleton from 'react-loading-skeleton';
 import ReactPaginate from 'react-paginate';
 import ProductCard from '@components/ProductCard';
-import { clsx } from 'clsx';
-import { twMerge } from 'tailwind-merge';
-
-async function getProducts({ page = 1, search = '', category = '' }) {
-  const params = new URLSearchParams({ page: page.toString(), search, category });
-  const res = await fetch(`https://frahapharmacyy.vercel.app/api/products?${params}`, { cache: 'no-store' });
-  if (!res.ok) throw new Error('Failed to fetch products');
-  return res.json(); // { products, totalCount }
-}
 
 function ProductsContent() {
   const router = useRouter();
@@ -26,21 +15,66 @@ function ProductsContent() {
   const page = parseInt(searchParams.get('page') || '1');
   const search = searchParams.get('search') || '';
   const category = searchParams.get('category') || '';
+  
+  const [products, setProducts] = useState([]);
+  const [totalCount, setTotalCount] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [view, setView] = useState('grid');
-
-  const { data, isLoading } = useQuery({
-    queryKey: ['products', page, search, category],
-    queryFn: () => getProducts({ page, search, category }),
-    keepPreviousData: true,
-  });
-
-  const products = data?.products || [];
-  const totalPages = Math.ceil((data?.totalCount || 0) / 20);
 
   const { register, handleSubmit, watch } = useForm({
     defaultValues: { search },
   });
 
+  // Fetch products
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        setIsLoading(true);
+        const params = new URLSearchParams({ 
+          page: page.toString(), 
+          search, 
+          category: category || '',
+          limit: '20'
+        });
+        
+        const res = await fetch(`/api/products?${params}`);
+        
+        if (!res.ok) {
+          throw new Error(`HTTP error! status: ${res.status}`);
+        }
+        
+        const data = await res.json();
+        console.log('API Response:', data); // Debug log
+        
+        // Handle both array format and object format
+        if (Array.isArray(data)) {
+          setProducts(data);
+          setTotalCount(data.length);
+        } else if (data.products && Array.isArray(data.products)) {
+          setProducts(data.products);
+          setTotalCount(data.totalCount || data.products.length);
+        } else {
+          console.error('Unexpected data format:', data);
+          setProducts([]);
+          setTotalCount(0);
+        }
+      } catch (err) {
+        console.error('Error fetching products:', err);
+        setError(err.message);
+        setProducts([]);
+        setTotalCount(0);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchProducts();
+  }, [page, search, category]);
+
+  const totalPages = Math.ceil(totalCount / 20);
+
+  // Handle search form
   useEffect(() => {
     const subscription = watch(({ search: newSearch }) => {
       const params = new URLSearchParams(searchParams);
@@ -115,20 +149,18 @@ function ProductsContent() {
               <motion.button
                 whileHover={{ backgroundColor: '#e5e7eb' }}
                 onClick={() => setView('grid')}
-                className={twMerge(
-                  clsx('p-3', view === 'grid' ? 'bg-primary-blue text-white' : 'text-text-muted')
-                )}
+                className={`p-3 ${view === 'grid' ? 'bg-primary-blue text-white' : 'text-text-muted'}`}
                 aria-label="Grid view"
+                type="button"
               >
                 <Grid size={20} />
               </motion.button>
               <motion.button
                 whileHover={{ backgroundColor: '#e5e7eb' }}
                 onClick={() => setView('list')}
-                className={twMerge(
-                  clsx('p-3', view === 'list' ? 'bg-primary-blue text-white' : 'text-text-muted')
-                )}
+                className={`p-3 ${view === 'list' ? 'bg-primary-blue text-white' : 'text-text-muted'}`}
                 aria-label="List view"
+                type="button"
               >
                 <List size={20} />
               </motion.button>
@@ -156,19 +188,23 @@ function ProductsContent() {
               whileHover={{ y: -2 }}
               whileTap={{ scale: 0.95 }}
               onClick={() => handleCategoryChange(value)}
-              className={twMerge(
-                clsx(
-                  'px-6 py-2 rounded-full font-medium transition-colors duration-200',
-                  category === value || (value === 'all' && !category)
-                    ? 'bg-primary-blue text-white'
-                    : 'bg-white hover:bg-neutral-gray text-text-dark border border-border-light'
-                )
-              )}
+              className={`px-6 py-2 rounded-full font-medium transition-colors duration-200 ${
+                category === value || (value === 'all' && !category)
+                  ? 'bg-primary-blue text-white'
+                  : 'bg-white hover:bg-neutral-gray text-text-dark border border-border-light'
+              }`}
             >
               {label}
             </motion.button>
           ))}
         </motion.div>
+
+        {/* Debug Info */}
+        {error && (
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-8">
+            <strong>Error:</strong> {error}
+          </div>
+        )}
 
         {/* Products Count */}
         <motion.div
@@ -179,6 +215,7 @@ function ProductsContent() {
         >
           <p className="text-text-muted">
             Showing <span className="font-semibold text-text-dark">{products.length}</span> products
+            {totalCount > products.length && ` of ${totalCount} total`}
           </p>
           <select
             className="border border-border-light rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary-blue"
@@ -200,13 +237,11 @@ function ProductsContent() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className={twMerge(
-                clsx(
-                  view === 'grid'
-                    ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8'
-                    : 'flex flex-col gap-4'
-                )
-              )}
+              className={
+                view === 'grid'
+                  ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8'
+                  : 'flex flex-col gap-4'
+              }
             >
               {Array(12)
                 .fill()
@@ -221,13 +256,11 @@ function ProductsContent() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className={twMerge(
-                clsx(
-                  view === 'grid'
-                    ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8'
-                    : 'flex flex-col gap-4'
-                )
-              )}
+              className={
+                view === 'grid'
+                  ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8'
+                  : 'flex flex-col gap-4'
+              }
             >
               {products.map((product, index) => (
                 <motion.div
@@ -256,6 +289,9 @@ function ProductsContent() {
               <p className="text-text-muted mb-8">
                 We couldn't find any products matching your criteria. Try adjusting your search or filters.
               </p>
+              <p className="text-sm text-gray-500 mb-4">
+                Debug: Products count: {products.length} | Loading: {isLoading.toString()} | Error: {error || 'None'}
+              </p>
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
@@ -281,6 +317,7 @@ function ProductsContent() {
               nextLabel="Next"
               pageCount={totalPages}
               onPageChange={handlePageChange}
+              forcePage={page - 1}
               containerClassName="flex gap-2"
               pageClassName="px-4 py-2 border border-border-light rounded-lg hover:bg-neutral-gray text-text-muted"
               activeClassName="bg-primary-blue text-white"

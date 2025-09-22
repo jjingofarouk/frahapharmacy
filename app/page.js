@@ -1,6 +1,6 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import { Shield, Heart, Clock, CheckCircle } from 'lucide-react';
@@ -8,20 +8,44 @@ import ProductCard from '@components/ProductCard';
 import Skeleton from 'react-loading-skeleton';
 import 'react-loading-skeleton/dist/skeleton.css';
 
-async function getProducts() {
-  const res = await fetch('https://frahapharmacyy.vercel.app/api/products?limit=6', { cache: 'no-store' });
-  if (!res.ok) throw new Error('Failed to fetch products');
-  return res.json(); // { products: [...] }
-}
-
 export default function Home() {
-  const { data, isLoading } = useQuery({
-    queryKey: ['featured-products'],
-    queryFn: getProducts,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-  });
+  const [products, setProducts] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const products = data?.products || [];
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        setIsLoading(true);
+        const res = await fetch('/api/products?limit=6');
+        
+        if (!res.ok) {
+          throw new Error(`HTTP error! status: ${res.status}`);
+        }
+        
+        const data = await res.json();
+        console.log('API Response:', data); // Debug log
+        
+        // Handle both array format and object format
+        if (Array.isArray(data)) {
+          setProducts(data.slice(0, 6)); // Take first 6 if it's an array
+        } else if (data.products && Array.isArray(data.products)) {
+          setProducts(data.products.slice(0, 6));
+        } else {
+          console.error('Unexpected data format:', data);
+          setProducts([]);
+        }
+      } catch (err) {
+        console.error('Error fetching products:', err);
+        setError(err.message);
+        setProducts([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchProducts();
+  }, []);
 
   return (
     <div className="min-h-screen">
@@ -154,6 +178,14 @@ export default function Home() {
               Discover our most popular healthcare products and medications.
             </p>
           </motion.div>
+
+          {/* Debug Info */}
+          {error && (
+            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-8">
+              <strong>Error:</strong> {error}
+            </div>
+          )}
+
           <AnimatePresence mode="wait">
             {isLoading ? (
               <motion.div
@@ -169,7 +201,7 @@ export default function Home() {
                     <Skeleton key={i} height={300} className="rounded-xl" />
                   ))}
               </motion.div>
-            ) : (
+            ) : products.length > 0 ? (
               <motion.div
                 key="products"
                 initial={{ opacity: 0 }}
@@ -189,8 +221,24 @@ export default function Home() {
                   </motion.div>
                 ))}
               </motion.div>
+            ) : (
+              <motion.div
+                key="empty"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="text-center py-16"
+              >
+                <div className="text-xl text-text-muted mb-4">
+                  No products found. Check console for debug information.
+                </div>
+                <p className="text-sm text-gray-500">
+                  Products count: {products.length} | Loading: {isLoading.toString()} | Error: {error || 'None'}
+                </p>
+              </motion.div>
             )}
           </AnimatePresence>
+
           <motion.div
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
