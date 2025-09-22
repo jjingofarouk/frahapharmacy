@@ -38,8 +38,7 @@ function ProductsContent() {
           limit: '20'
         });
         
-        const res = await fetch(`/api/products?${params}`);
-        
+        const res = await fetch(`https://frahapharmacyy.vercel.app/api/products?${params}`);        
         if (!res.ok) {
           throw new Error(`HTTP error! status: ${res.status}`);
         }
