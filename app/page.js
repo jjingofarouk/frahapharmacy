@@ -45,32 +45,52 @@ export default function PharmacyHomepage() {
   const [selectedCurrency, setSelectedCurrency] = useState('UGX');
   const [isLoading, setIsLoading] = useState(true);
   const [showCategories, setShowCategories] = useState(false);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         setIsLoading(true);
+        setError(null);
         
-        // Fetch products and categories
+        // Fetch products and categories with proper error handling
         const [productsRes, categoriesRes] = await Promise.all([
-          fetch('/api/products'),
-          fetch('/api/categories')
+          fetch('https://frahapharmacyy.vercel.app/api/products'),
+          fetch('https://frahapharmacyy.vercel.app/api/categories')
         ]);
 
-        // Check if responses are ok
-        if (!productsRes.ok) throw new Error('Failed to fetch products');
-        if (!categoriesRes.ok) throw new Error('Failed to fetch categories');
+        // Handle products response
+        let productsData = [];
+        if (productsRes.ok) {
+          const productsJson = await productsRes.json();
+          if (Array.isArray(productsJson)) {
+            productsData = productsJson;
+          } else if (productsJson.error) {
+            console.error('Products API error:', productsJson.error);
+          }
+        } else {
+          console.error('Failed to fetch products:', productsRes.status);
+        }
 
-        const productsData = await productsRes.json();
-        const categoriesData = await categoriesRes.json();
+        // Handle categories response  
+        let categoriesData = [];
+        if (categoriesRes.ok) {
+          const categoriesJson = await categoriesRes.json();
+          if (Array.isArray(categoriesJson)) {
+            categoriesData = categoriesJson;
+          } else if (categoriesJson.error) {
+            console.error('Categories API error:', categoriesJson.error);
+          }
+        } else {
+          console.error('Failed to fetch categories:', categoriesRes.status);
+        }
 
-        // Handle API errors
-        if (productsData.error) {
-          console.error('Products API error:', productsData.error);
-          setProducts([]);
-        } else if (Array.isArray(productsData)) {
-          setProducts(productsData);
-          // Create deal products with fake discounts
+        // Set state with data or fallbacks
+        setProducts(productsData);
+        setCategories(categoriesData);
+
+        // Create deal products if we have products
+        if (productsData.length > 0) {
           const randomProducts = productsData
             .sort(() => Math.random() - 0.5)
             .slice(0, 5)
@@ -80,20 +100,59 @@ export default function PharmacyHomepage() {
               discount: Math.floor(Math.random() * 30) + 20
             }));
           setDealProducts(randomProducts);
+        } else {
+          // Create sample deal if no products from API
+          setDealProducts([{
+            id: 'sample-1',
+            name: 'Sample Medicine',
+            description: 'Quality healthcare product',
+            price: 15000,
+            originalPrice: 20000,
+            discount: 25,
+            stock: 10,
+            imageUrl: null
+          }]);
         }
-        
-        if (categoriesData.error) {
-          console.error('Categories API error:', categoriesData.error);
-          setCategories([]);
-        } else if (Array.isArray(categoriesData)) {
-          setCategories(categoriesData);
-        }
+
       } catch (error) {
         console.error('Error fetching data:', error);
-        // Set empty arrays as fallback
-        setProducts([]);
-        setCategories([]);
-        setDealProducts([]);
+        setError('Failed to load data. Please try again.');
+        
+        // Set sample data as fallback
+        setProducts([
+          {
+            id: 'sample-1',
+            name: 'Sample Medicine A',
+            description: 'Quality healthcare product for your needs',
+            price: 15000,
+            stock: 10,
+            categories: [{ id: 1, name: 'General Medicine' }]
+          },
+          {
+            id: 'sample-2', 
+            name: 'Sample Medicine B',
+            description: 'Trusted pharmaceutical solution',
+            price: 25000,
+            stock: 5,
+            categories: [{ id: 2, name: 'Vitamins' }]
+          }
+        ]);
+        
+        setCategories([
+          { id: 1, name: 'General Medicine' },
+          { id: 2, name: 'Vitamins' },
+          { id: 3, name: 'Pain Relief' }
+        ]);
+
+        setDealProducts([{
+          id: 'sample-deal',
+          name: 'Sample Deal Medicine',
+          description: 'Great value for your health',
+          price: 12000,
+          originalPrice: 16000,
+          discount: 25,
+          stock: 8
+        }]);
       } finally {
         setIsLoading(false);
       }
@@ -147,6 +206,13 @@ export default function PharmacyHomepage() {
 
   return (
     <div className="min-h-screen bg-white">
+      {/* Error Banner */}
+      {error && (
+        <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-3 text-center">
+          <p>{error} Showing sample data for demonstration.</p>
+        </div>
+      )}
+
       {/* Hero Section */}
       <section className="relative bg-gradient-to-br from-blue-600 via-blue-700 to-green-600 text-white overflow-hidden">
         <div className="absolute inset-0">
@@ -328,7 +394,7 @@ export default function PharmacyHomepage() {
                         -{dealProducts[currentDeal].discount}%
                       </div>
                       <img
-                        src={dealProducts[currentDeal].imageUrl || `/api/placeholder/400/300?text=${encodeURIComponent(dealProducts[currentDeal].name)}`}
+                        src={dealProducts[currentDeal].imageUrl || `https://via.placeholder.com/400x300/3B82F6/FFFFFF?text=${encodeURIComponent(dealProducts[currentDeal].name)}`}
                         alt={dealProducts[currentDeal].name}
                         className="w-full h-64 object-cover rounded-2xl"
                       />
@@ -390,30 +456,34 @@ export default function PharmacyHomepage() {
                 </AnimatePresence>
               </div>
 
-              <button
-                onClick={prevDeal}
-                className="absolute left-4 top-1/2 -translate-y-1/2 bg-white shadow-lg rounded-full p-3 hover:bg-gray-50"
-              >
-                <ChevronLeft size={24} />
-              </button>
-              <button
-                onClick={nextDeal}
-                className="absolute right-4 top-1/2 -translate-y-1/2 bg-white shadow-lg rounded-full p-3 hover:bg-gray-50"
-              >
-                <ChevronRight size={24} />
-              </button>
-
-              <div className="flex justify-center mt-6 gap-2">
-                {dealProducts.map((_, index) => (
+              {dealProducts.length > 1 && (
+                <>
                   <button
-                    key={index}
-                    onClick={() => setCurrentDeal(index)}
-                    className={`w-3 h-3 rounded-full transition-colors ${
-                      index === currentDeal ? 'bg-blue-600' : 'bg-gray-300'
-                    }`}
-                  />
-                ))}
-              </div>
+                    onClick={prevDeal}
+                    className="absolute left-4 top-1/2 -translate-y-1/2 bg-white shadow-lg rounded-full p-3 hover:bg-gray-50"
+                  >
+                    <ChevronLeft size={24} />
+                  </button>
+                  <button
+                    onClick={nextDeal}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 bg-white shadow-lg rounded-full p-3 hover:bg-gray-50"
+                  >
+                    <ChevronRight size={24} />
+                  </button>
+
+                  <div className="flex justify-center mt-6 gap-2">
+                    {dealProducts.map((_, index) => (
+                      <button
+                        key={index}
+                        onClick={() => setCurrentDeal(index)}
+                        className={`w-3 h-3 rounded-full transition-colors ${
+                          index === currentDeal ? 'bg-blue-600' : 'bg-gray-300'
+                        }`}
+                      />
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
           )}
         </div>
@@ -441,28 +511,28 @@ export default function PharmacyHomepage() {
                   title: "Browse & Select",
                   description: "Browse our extensive catalog and add items to your cart",
                   icon: "🛒",
-                  image: "/api/placeholder/300/200?text=Browse+Products"
+                  image: "https://via.placeholder.com/300x200/3B82F6/FFFFFF?text=Browse+Products"
                 },
                 {
                   step: 2,
                   title: "Review Your Order",
                   description: "Check your items and proceed to checkout via WhatsApp",
                   icon: "📋",
-                  image: "/api/placeholder/300/200?text=Review+Order"
+                  image: "https://via.placeholder.com/300x200/10B981/FFFFFF?text=Review+Order"
                 },
                 {
                   step: 3,
                   title: "Confirm & Pay",
                   description: "Confirm your order details and choose your payment method",
                   icon: "💳",
-                  image: "/api/placeholder/300/200?text=Confirm+Payment"
+                  image: "https://via.placeholder.com/300x200/F59E0B/FFFFFF?text=Confirm+Payment"
                 },
                 {
                   step: 4,
                   title: "Fast Delivery",
                   description: "Receive your medicines at your doorstep within hours",
                   icon: "🚚",
-                  image: "/api/placeholder/300/200?text=Fast+Delivery"
+                  image: "https://via.placeholder.com/300x200/EF4444/FFFFFF?text=Fast+Delivery"
                 }
               ].map((item, index) => (
                 <motion.div
@@ -533,89 +603,112 @@ export default function PharmacyHomepage() {
       {/* Product Categories */}
       <section className="py-16 bg-white">
         <div className="container mx-auto px-4">
-          {categories.slice(0, 3).map((category, categoryIndex) => {
-            const categoryProducts = products.filter(product => 
-              product.categories?.some(cat => cat.id === category.id)
-            ).slice(0, 4);
+          {products.length > 0 && categories.length > 0 ? (
+            // Show real categories and products
+            categories.slice(0, 3).map((category, categoryIndex) => {
+              const categoryProducts = products.filter(product => 
+                product.categories?.some(cat => cat.id === category.id)
+              ).slice(0, 4);
 
-            if (categoryProducts.length === 0) return null;
+              // If no products in this category, show all products for demo
+              const displayProducts = categoryProducts.length > 0 ? categoryProducts : products.slice(0, 4);
 
-            return (
-              <motion.div
-                key={category.id}
-                initial={{ opacity: 0, y: 50 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: categoryIndex * 0.2 }}
-                className="mb-16"
-              >
-                <div className="flex justify-between items-center mb-8">
-                  <h2 className="text-3xl font-bold text-gray-800">{category.name}</h2>
-                  <Link
-                    href={`/products?category=${category.id}`}
-                    className="text-blue-600 hover:text-blue-700 font-semibold flex items-center gap-2"
-                  >
-                    View All <ArrowRight size={20} />
-                  </Link>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                  {categoryProducts.map((product, index) => (
-                    <motion.div
-                      key={product.id}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: categoryIndex * 0.2 + index * 0.1 }}
-                      whileHover={{ y: -5 }}
-                      className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300"
+              return (
+                <motion.div
+                  key={category.id}
+                  initial={{ opacity: 0, y: 50 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: categoryIndex * 0.2 }}
+                  className="mb-16"
+                >
+                  <div className="flex justify-between items-center mb-8">
+                    <h2 className="text-3xl font-bold text-gray-800">{category.name}</h2>
+                    <Link
+                      href={`/products?category=${category.id}`}
+                      className="text-blue-600 hover:text-blue-700 font-semibold flex items-center gap-2"
                     >
-                      <div className="relative">
-                        <img
-                          src={product.imageUrl || `/api/placeholder/300/200?text=${encodeURIComponent(product.name)}`}
-                          alt={product.name}
-                          className="w-full h-48 object-cover"
-                        />
-                        <div className="absolute top-4 right-4 bg-white rounded-full p-2 shadow-md">
-                          <Heart size={16} className="text-gray-400 hover:text-red-500 cursor-pointer" />
-                        </div>
-                      </div>
-                      
-                      <div className="p-6">
-                        <h3 className="text-lg font-semibold text-gray-800 mb-2 line-clamp-2">
-                          {product.name}
-                        </h3>
-                        <p className="text-gray-600 text-sm mb-4 line-clamp-2">
-                          {product.description || 'Quality medicine for your health needs'}
-                        </p>
-                        
-                        <div className="flex items-center justify-between">
-                          <div className="text-2xl font-bold text-green-600">
-                            {formatPrice(product.price)}
-                          </div>
-                          <motion.button
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                            onClick={() => handleAddToCart(product)}
-                            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 font-semibold"
-                          >
-                            <ShoppingCart size={16} />
-                            Add
-                          </motion.button>
-                        </div>
-                        
-                        <div className="mt-4 flex items-center justify-between text-sm text-gray-600">
-                          <span>Stock: {product.stock}</span>
-                          <div className="flex items-center gap-1">
-                            <Star size={14} className="text-yellow-400 fill-current" />
-                            <span>4.{Math.floor(Math.random() * 5) + 5}</span>
+                      View All <ArrowRight size={20} />
+                    </Link>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    {displayProducts.map((product, index) => (
+                      <motion.div
+                        key={product.id}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: categoryIndex * 0.2 + index * 0.1 }}
+                        whileHover={{ y: -5 }}
+                        className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300"
+                      >
+                        <div className="relative">
+                          <img
+                            src={product.imageUrl || `https://via.placeholder.com/300x200/3B82F6/FFFFFF?text=${encodeURIComponent(product.name)}`}
+                            alt={product.name}
+                            className="w-full h-48 object-cover"
+                          />
+                          <div className="absolute top-4 right-4 bg-white rounded-full p-2 shadow-md">
+                            <Heart size={16} className="text-gray-400 hover:text-red-500 cursor-pointer" />
                           </div>
                         </div>
-                      </div>
-                    </motion.div>
-                  ))}
+                        
+                        <div className="p-6">
+                          <h3 className="text-lg font-semibold text-gray-800 mb-2 line-clamp-2">
+                            {product.name}
+                          </h3>
+                          <p className="text-gray-600 text-sm mb-4 line-clamp-2">
+                            {product.description || 'Quality medicine for your health needs'}
+                          </p>
+                          
+                          <div className="flex items-center justify-between">
+                            <div className="text-2xl font-bold text-green-600">
+                              {formatPrice(product.price)}
+                            </div>
+                            <motion.button
+                              whileHover={{ scale: 1.05 }}
+                              whileTap={{ scale: 0.95 }}
+                              onClick={() => handleAddToCart(product)}
+                              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 font-semibold"
+                            >
+                              <ShoppingCart size={16} />
+                              Add
+                            </motion.button>
+                          </div>
+                          
+                          <div className="mt-4 flex items-center justify-between text-sm text-gray-600">
+                            <span>Stock: {product.stock || 'Available'}</span>
+                            <div className="flex items-center gap-1">
+                              <Star size={14} className="text-yellow-400 fill-current" />
+                              <span>4.{Math.floor(Math.random() * 5) + 5}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
+                </motion.div>
+              );
+            })
+          ) : (
+            // Show sample products if no data available
+            <div className="text-center py-16">
+              <div className="max-w-md mx-auto">
+                <div className="w-24 h-24 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <ShoppingCart size={32} className="text-blue-600" />
                 </div>
-              </motion.div>
-            );
-          })}
+                <h3 className="text-2xl font-bold text-gray-800 mb-4">Products Coming Soon</h3>
+                <p className="text-gray-600 mb-8">
+                  We're loading our extensive catalog of quality medicines and healthcare products.
+                </p>
+                <Link
+                  href="/contact"
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg font-semibold inline-block"
+                >
+                  Contact Us for Orders
+                </Link>
+              </div>
+            </div>
+          )}
         </div>
       </section>
 
