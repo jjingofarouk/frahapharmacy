@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   ChevronLeft, 
@@ -14,11 +13,9 @@ import {
   Phone,
   MapPin,
   ArrowRight,
-  Tag,
   Heart,
   ShoppingCart
 } from 'lucide-react';
-import Footer from '@/components/Footer';
 import { useCartStore } from '@/stores/cartStore';
 
 const CURRENCIES = [
@@ -34,7 +31,6 @@ const CURRENCIES = [
   { code: 'GHS', symbol: '₵', rate: 0.0032 }
 ];
 
-// Dummy brand data since it's not in the database yet
 const FEATURED_BRANDS = [
   'Pfizer', 'GSK', 'Novartis', 'Roche', 'Johnson & Johnson', 
   'Merck', 'AstraZeneca', 'Sanofi', 'Abbott', 'Bayer'
@@ -55,15 +51,24 @@ export default function PharmacyHomepage() {
       try {
         setIsLoading(true);
         
-        // Fetch products
-        const productsRes = await fetch('/api/products');
+        // Fetch products and categories
+        const [productsRes, categoriesRes] = await Promise.all([
+          fetch('/api/products'),
+          fetch('/api/categories')
+        ]);
+
+        // Check if responses are ok
+        if (!productsRes.ok) throw new Error('Failed to fetch products');
+        if (!categoriesRes.ok) throw new Error('Failed to fetch categories');
+
         const productsData = await productsRes.json();
-        
-        // Fetch categories
-        const categoriesRes = await fetch('/api/categories');
         const categoriesData = await categoriesRes.json();
-        
-        if (Array.isArray(productsData)) {
+
+        // Handle API errors
+        if (productsData.error) {
+          console.error('Products API error:', productsData.error);
+          setProducts([]);
+        } else if (Array.isArray(productsData)) {
           setProducts(productsData);
           // Create deal products with fake discounts
           const randomProducts = productsData
@@ -71,19 +76,17 @@ export default function PharmacyHomepage() {
             .slice(0, 5)
             .map(product => ({
               ...product,
-              originalPrice: product.price * (1 + Math.random() * 0.5 + 0.2), // 20-70% markup
-              discount: Math.floor(Math.random() * 30) + 20 // 20-50% discount
+              originalPrice: product.price * (1 + Math.random() * 0.5 + 0.2),
+              discount: Math.floor(Math.random() * 30) + 20
             }));
           setDealProducts(randomProducts);
-        } else {
-          setProducts([]);
-          setDealProducts([]);
         }
         
-        if (Array.isArray(categoriesData)) {
-          setCategories(categoriesData);
-        } else {
+        if (categoriesData.error) {
+          console.error('Categories API error:', categoriesData.error);
           setCategories([]);
+        } else if (Array.isArray(categoriesData)) {
+          setCategories(categoriesData);
         }
       } catch (error) {
         console.error('Error fetching data:', error);
@@ -135,8 +138,8 @@ export default function PharmacyHomepage() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-green-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary-blue mx-auto mb-4"></div>
-          <p className="text-xl text-text-muted">Loading your pharmacy...</p>
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-xl text-gray-600">Loading your pharmacy...</p>
         </div>
       </div>
     );
@@ -144,10 +147,8 @@ export default function PharmacyHomepage() {
 
   return (
     <div className="min-h-screen bg-white">
-      
-      {/* Hero Section with Animated Background */}
-      <section className="relative bg-gradient-to-br from-primary-blue via-blue-600 to-green-600 text-white overflow-hidden">
-        {/* Animated Background Elements */}
+      {/* Hero Section */}
+      <section className="relative bg-gradient-to-br from-blue-600 via-blue-700 to-green-600 text-white overflow-hidden">
         <div className="absolute inset-0">
           {[...Array(20)].map((_, i) => (
             <motion.div
@@ -181,7 +182,7 @@ export default function PharmacyHomepage() {
             >
               <h1 className="text-5xl lg:text-7xl font-bold mb-6 leading-tight">
                 Your Health,
-                <span className="text-accent-blue block">Our Priority</span>
+                <span className="text-blue-300 block">Our Priority</span>
               </h1>
               <p className="text-xl mb-8 text-blue-100 leading-relaxed max-w-lg">
                 Experience premium pharmaceutical care with Fraha Pharmacy - your trusted health partner in Kampala.
@@ -194,7 +195,7 @@ export default function PharmacyHomepage() {
                 >
                   <Link
                     href="/products"
-                    className="bg-success-green hover:bg-green-600 text-white px-8 py-4 rounded-xl font-semibold flex items-center justify-center gap-2 transition-colors"
+                    className="bg-green-600 hover:bg-green-700 text-white px-8 py-4 rounded-xl font-semibold flex items-center justify-center gap-2 transition-colors"
                   >
                     <ShoppingCart size={20} />
                     Shop Now
@@ -204,14 +205,13 @@ export default function PharmacyHomepage() {
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
-                  className="border-2 border-white text-white hover:bg-white hover:text-primary-blue px-8 py-4 rounded-xl font-semibold transition-colors"
+                  className="border-2 border-white text-white hover:bg-white hover:text-blue-600 px-8 py-4 rounded-xl font-semibold transition-colors"
                   onClick={() => setShowCategories(!showCategories)}
                 >
                   Browse Categories
                 </motion.button>
               </div>
               
-              {/* Currency Selector */}
               <div className="mt-8">
                 <label className="text-blue-100 text-sm mb-2 block">Currency:</label>
                 <select
@@ -236,7 +236,7 @@ export default function PharmacyHomepage() {
             >
               <div className="bg-white/10 backdrop-blur-lg rounded-3xl p-8 border border-white/20">
                 <div className="text-center space-y-6">
-                  <div className="w-24 h-24 bg-accent-blue rounded-full flex items-center justify-center mx-auto">
+                  <div className="w-24 h-24 bg-blue-300 rounded-full flex items-center justify-center mx-auto">
                     <Shield size={40} className="text-white" />
                   </div>
                   <h3 className="text-2xl font-bold">Licensed & Trusted</h3>
@@ -244,15 +244,15 @@ export default function PharmacyHomepage() {
                   
                   <div className="grid grid-cols-3 gap-4 pt-4">
                     <div className="text-center">
-                      <div className="text-2xl font-bold text-accent-blue">10+</div>
+                      <div className="text-2xl font-bold text-blue-300">10+</div>
                       <div className="text-sm text-blue-100">Years</div>
                     </div>
                     <div className="text-center">
-                      <div className="text-2xl font-bold text-accent-blue">5000+</div>
+                      <div className="text-2xl font-bold text-blue-300">5000+</div>
                       <div className="text-sm text-blue-100">Customers</div>
                     </div>
                     <div className="text-center">
-                      <div className="text-2xl font-bold text-accent-blue">24/7</div>
+                      <div className="text-2xl font-bold text-blue-300">24/7</div>
                       <div className="text-sm text-blue-100">Support</div>
                     </div>
                   </div>
@@ -263,7 +263,7 @@ export default function PharmacyHomepage() {
         </div>
       </section>
 
-      {/* Categories Quick Menu (Expandable) */}
+      {/* Categories Quick Menu */}
       <AnimatePresence>
         {showCategories && (
           <motion.section
@@ -273,7 +273,7 @@ export default function PharmacyHomepage() {
             className="bg-gradient-to-r from-green-50 to-blue-50 border-b border-gray-200"
           >
             <div className="container mx-auto px-4 py-8">
-              <h3 className="text-2xl font-bold text-center mb-6 text-text-dark">Shop by Category</h3>
+              <h3 className="text-2xl font-bold text-center mb-6 text-gray-800">Shop by Category</h3>
               <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
                 {categories.slice(0, 12).map((category, index) => (
                   <motion.div
@@ -286,10 +286,10 @@ export default function PharmacyHomepage() {
                       href={`/products?category=${category.id}`}
                       className="bg-white rounded-xl p-4 text-center hover:shadow-lg transition-shadow cursor-pointer border border-gray-200 block"
                     >
-                      <div className="w-12 h-12 bg-primary-blue rounded-full flex items-center justify-center mx-auto mb-3">
+                      <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center mx-auto mb-3">
                         <Heart size={24} className="text-white" />
                       </div>
-                      <h4 className="font-semibold text-text-dark text-sm">{category.name}</h4>
+                      <h4 className="font-semibold text-gray-800 text-sm">{category.name}</h4>
                     </Link>
                   </motion.div>
                 ))}
@@ -299,7 +299,7 @@ export default function PharmacyHomepage() {
         )}
       </AnimatePresence>
 
-      {/* Deal of the Day Slider */}
+      {/* Deal of the Day */}
       <section className="bg-gradient-to-r from-red-50 to-orange-50 py-16">
         <div className="container mx-auto px-4">
           <motion.div
@@ -307,10 +307,8 @@ export default function PharmacyHomepage() {
             animate={{ opacity: 1, y: 0 }}
             className="text-center mb-12"
           >
-            <h2 className="text-4xl font-bold text-text-dark mb-4">
-              Deal of the Day
-            </h2>
-            <p className="text-xl text-text-muted">Limited time offers on premium medicines</p>
+            <h2 className="text-4xl font-bold text-gray-800 mb-4">Deal of the Day</h2>
+            <p className="text-xl text-gray-600">Limited time offers on premium medicines</p>
           </motion.div>
 
           {dealProducts.length > 0 && (
@@ -330,7 +328,7 @@ export default function PharmacyHomepage() {
                         -{dealProducts[currentDeal].discount}%
                       </div>
                       <img
-                        src={dealProducts[currentDeal].imageUrl || `https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=400&h=300&fit=crop&sig=${dealProducts[currentDeal].id}`}
+                        src={dealProducts[currentDeal].imageUrl || `/api/placeholder/400/300?text=${encodeURIComponent(dealProducts[currentDeal].name)}`}
                         alt={dealProducts[currentDeal].name}
                         className="w-full h-64 object-cover rounded-2xl"
                       />
@@ -338,17 +336,17 @@ export default function PharmacyHomepage() {
                     
                     <div className="flex flex-col justify-center space-y-6">
                       <div>
-                        <h3 className="text-3xl font-bold text-text-dark mb-2">
+                        <h3 className="text-3xl font-bold text-gray-800 mb-2">
                           {dealProducts[currentDeal].name}
                         </h3>
-                        <p className="text-text-muted">
+                        <p className="text-gray-600">
                           {dealProducts[currentDeal].description || 'Premium quality medicine at an unbeatable price.'}
                         </p>
                       </div>
                       
                       <div className="space-y-2">
                         <div className="flex items-center gap-4">
-                          <span className="text-3xl font-bold text-success-green">
+                          <span className="text-3xl font-bold text-green-600">
                             {formatPrice(dealProducts[currentDeal].price)}
                           </span>
                           <span className="text-xl text-gray-500 line-through">
@@ -365,7 +363,7 @@ export default function PharmacyHomepage() {
                           whileHover={{ scale: 1.05 }}
                           whileTap={{ scale: 0.95 }}
                           onClick={() => handleAddToCart(dealProducts[currentDeal])}
-                          className="bg-success-green hover:bg-green-600 text-white px-8 py-4 rounded-xl font-semibold flex items-center gap-2"
+                          className="bg-green-600 hover:bg-green-700 text-white px-8 py-4 rounded-xl font-semibold flex items-center gap-2"
                         >
                           <ShoppingCart size={20} />
                           Add to Cart
@@ -376,14 +374,14 @@ export default function PharmacyHomepage() {
                         >
                           <Link
                             href={`/products/${dealProducts[currentDeal].id}`}
-                            className="border-2 border-primary-blue text-primary-blue hover:bg-primary-blue hover:text-white px-8 py-4 rounded-xl font-semibold inline-block"
+                            className="border-2 border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white px-8 py-4 rounded-xl font-semibold inline-block"
                           >
                             View Details
                           </Link>
                         </motion.div>
                       </div>
                       
-                      <div className="text-sm text-text-muted flex items-center gap-2">
+                      <div className="text-sm text-gray-600 flex items-center gap-2">
                         <Clock size={16} />
                         Offer expires in 23h 59m
                       </div>
@@ -392,7 +390,6 @@ export default function PharmacyHomepage() {
                 </AnimatePresence>
               </div>
 
-              {/* Slider Controls */}
               <button
                 onClick={prevDeal}
                 className="absolute left-4 top-1/2 -translate-y-1/2 bg-white shadow-lg rounded-full p-3 hover:bg-gray-50"
@@ -406,14 +403,13 @@ export default function PharmacyHomepage() {
                 <ChevronRight size={24} />
               </button>
 
-              {/* Dots Indicator */}
               <div className="flex justify-center mt-6 gap-2">
                 {dealProducts.map((_, index) => (
                   <button
                     key={index}
                     onClick={() => setCurrentDeal(index)}
                     className={`w-3 h-3 rounded-full transition-colors ${
-                      index === currentDeal ? 'bg-primary-blue' : 'bg-gray-300'
+                      index === currentDeal ? 'bg-blue-600' : 'bg-gray-300'
                     }`}
                   />
                 ))}
@@ -423,7 +419,7 @@ export default function PharmacyHomepage() {
         </div>
       </section>
 
-      {/* How to Order Timeline */}
+      {/* How to Order */}
       <section className="py-16 bg-white">
         <div className="container mx-auto px-4">
           <motion.div
@@ -431,14 +427,13 @@ export default function PharmacyHomepage() {
             animate={{ opacity: 1, y: 0 }}
             className="text-center mb-16"
           >
-            <h2 className="text-4xl font-bold text-text-dark mb-4">How to Order</h2>
-            <p className="text-xl text-text-muted">Simple steps to get your medicines delivered</p>
+            <h2 className="text-4xl font-bold text-gray-800 mb-4">How to Order</h2>
+            <p className="text-xl text-gray-600">Simple steps to get your medicines delivered</p>
           </motion.div>
 
           <div className="max-w-4xl mx-auto">
             <div className="relative">
-              {/* Timeline Line */}
-              <div className="absolute left-1/2 transform -translate-x-1/2 w-1 h-full bg-primary-blue hidden md:block"></div>
+              <div className="absolute left-1/2 transform -translate-x-1/2 w-1 h-full bg-blue-600 hidden md:block"></div>
               
               {[
                 {
@@ -446,28 +441,28 @@ export default function PharmacyHomepage() {
                   title: "Browse & Select",
                   description: "Browse our extensive catalog and add items to your cart",
                   icon: "🛒",
-                  image: "https://images.unsplash.com/photo-1556909888-f2e51d824630?w=300&h=200&fit=crop"
+                  image: "/api/placeholder/300/200?text=Browse+Products"
                 },
                 {
                   step: 2,
                   title: "Review Your Order",
                   description: "Check your items and proceed to checkout via WhatsApp",
                   icon: "📋",
-                  image: "https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=300&h=200&fit=crop"
+                  image: "/api/placeholder/300/200?text=Review+Order"
                 },
                 {
                   step: 3,
                   title: "Confirm & Pay",
                   description: "Confirm your order details and choose your payment method",
                   icon: "💳",
-                  image: "https://images.unsplash.com/photo-1563013544-824ae1b704d3?w=300&h=200&fit=crop"
+                  image: "/api/placeholder/300/200?text=Confirm+Payment"
                 },
                 {
                   step: 4,
                   title: "Fast Delivery",
                   description: "Receive your medicines at your doorstep within hours",
                   icon: "🚚",
-                  image: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=300&h=200&fit=crop"
+                  image: "/api/placeholder/300/200?text=Fast+Delivery"
                 }
               ].map((item, index) => (
                 <motion.div
@@ -480,20 +475,20 @@ export default function PharmacyHomepage() {
                   }`}
                 >
                   <div className={`w-full md:w-5/12 ${index % 2 === 0 ? 'md:pr-8' : 'md:pl-8'}`}>
-                    <div className="bg-white border-2 border-primary-blue rounded-2xl p-6 shadow-lg">
+                    <div className="bg-white border-2 border-blue-600 rounded-2xl p-6 shadow-lg">
                       <div className="flex items-center mb-4">
-                        <div className="w-12 h-12 bg-primary-blue text-white rounded-full flex items-center justify-center font-bold text-lg mr-4">
+                        <div className="w-12 h-12 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold text-lg mr-4">
                           {item.step}
                         </div>
-                        <h3 className="text-2xl font-bold text-text-dark">{item.title}</h3>
+                        <h3 className="text-2xl font-bold text-gray-800">{item.title}</h3>
                       </div>
-                      <p className="text-text-muted mb-4">{item.description}</p>
+                      <p className="text-gray-600 mb-4">{item.description}</p>
                       <div className="text-4xl">{item.icon}</div>
                     </div>
                   </div>
                   
                   <div className="hidden md:flex w-2/12 justify-center">
-                    <div className="w-4 h-4 bg-primary-blue rounded-full border-4 border-white shadow-lg"></div>
+                    <div className="w-4 h-4 bg-blue-600 rounded-full border-4 border-white shadow-lg"></div>
                   </div>
                   
                   <div className={`w-full md:w-5/12 ${index % 2 === 0 ? 'md:pl-8' : 'md:pr-8'} mt-4 md:mt-0`}>
@@ -510,10 +505,10 @@ export default function PharmacyHomepage() {
         </div>
       </section>
 
-      {/* Featured Brands Marquee */}
+      {/* Featured Brands */}
       <section className="py-8 bg-gradient-to-r from-gray-50 to-blue-50 overflow-hidden">
         <div className="container mx-auto px-4 mb-8">
-          <h2 className="text-3xl font-bold text-center text-text-dark">Trusted Brands</h2>
+          <h2 className="text-3xl font-bold text-center text-gray-800">Trusted Brands</h2>
         </div>
         
         <div className="relative">
@@ -528,14 +523,14 @@ export default function PharmacyHomepage() {
                 key={`${brand}-${index}`}
                 className="bg-white rounded-xl px-8 py-4 shadow-md border border-gray-200 flex-shrink-0"
               >
-                <span className="text-xl font-bold text-text-dark">{brand}</span>
+                <span className="text-xl font-bold text-gray-800">{brand}</span>
               </div>
             ))}
           </motion.div>
         </div>
       </section>
 
-      {/* Product Categories Sections */}
+      {/* Product Categories */}
       <section className="py-16 bg-white">
         <div className="container mx-auto px-4">
           {categories.slice(0, 3).map((category, categoryIndex) => {
@@ -554,10 +549,10 @@ export default function PharmacyHomepage() {
                 className="mb-16"
               >
                 <div className="flex justify-between items-center mb-8">
-                  <h2 className="text-3xl font-bold text-text-dark">{category.name}</h2>
+                  <h2 className="text-3xl font-bold text-gray-800">{category.name}</h2>
                   <Link
                     href={`/products?category=${category.id}`}
-                    className="text-primary-blue hover:text-blue-700 font-semibold flex items-center gap-2"
+                    className="text-blue-600 hover:text-blue-700 font-semibold flex items-center gap-2"
                   >
                     View All <ArrowRight size={20} />
                   </Link>
@@ -570,12 +565,12 @@ export default function PharmacyHomepage() {
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: categoryIndex * 0.2 + index * 0.1 }}
-                      whileHover={{ y: -5, shadow: "0 20px 40px rgba(0,0,0,0.1)" }}
+                      whileHover={{ y: -5 }}
                       className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300"
                     >
                       <div className="relative">
                         <img
-                          src={product.imageUrl || `https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=300&h=200&fit=crop&sig=${product.id}`}
+                          src={product.imageUrl || `/api/placeholder/300/200?text=${encodeURIComponent(product.name)}`}
                           alt={product.name}
                           className="w-full h-48 object-cover"
                         />
@@ -585,29 +580,29 @@ export default function PharmacyHomepage() {
                       </div>
                       
                       <div className="p-6">
-                        <h3 className="text-lg font-semibold text-text-dark mb-2 line-clamp-2">
+                        <h3 className="text-lg font-semibold text-gray-800 mb-2 line-clamp-2">
                           {product.name}
                         </h3>
-                        <p className="text-text-muted text-sm mb-4 line-clamp-2">
+                        <p className="text-gray-600 text-sm mb-4 line-clamp-2">
                           {product.description || 'Quality medicine for your health needs'}
                         </p>
                         
                         <div className="flex items-center justify-between">
-                          <div className="text-2xl font-bold text-success-green">
+                          <div className="text-2xl font-bold text-green-600">
                             {formatPrice(product.price)}
                           </div>
                           <motion.button
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}
                             onClick={() => handleAddToCart(product)}
-                            className="bg-primary-blue hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 font-semibold"
+                            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 font-semibold"
                           >
                             <ShoppingCart size={16} />
                             Add
                           </motion.button>
                         </div>
                         
-                        <div className="mt-4 flex items-center justify-between text-sm text-text-muted">
+                        <div className="mt-4 flex items-center justify-between text-sm text-gray-600">
                           <span>Stock: {product.stock}</span>
                           <div className="flex items-center gap-1">
                             <Star size={14} className="text-yellow-400 fill-current" />
@@ -624,8 +619,8 @@ export default function PharmacyHomepage() {
         </div>
       </section>
 
-      {/* Contact CTA Section */}
-      <section className="bg-gradient-to-r from-primary-blue to-green-600 text-white py-16">
+      {/* Contact CTA */}
+      <section className="bg-gradient-to-r from-blue-600 to-green-600 text-white py-16">
         <div className="container mx-auto px-4 text-center">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -639,13 +634,13 @@ export default function PharmacyHomepage() {
             
             <div className="grid md:grid-cols-2 gap-8 mb-8">
               <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20">
-                <Phone size={32} className="text-accent-blue mx-auto mb-4" />
+                <Phone size={32} className="text-blue-300 mx-auto mb-4" />
                 <h3 className="text-xl font-bold mb-2">Call Us</h3>
                 <p className="text-blue-100">+256 751 360 385</p>
               </div>
               
               <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20">
-                <MapPin size={32} className="text-accent-blue mx-auto mb-4" />
+                <MapPin size={32} className="text-blue-300 mx-auto mb-4" />
                 <h3 className="text-xl font-bold mb-2">Visit Us</h3>
                 <p className="text-blue-100">Kampala, Central Region</p>
               </div>
@@ -658,7 +653,7 @@ export default function PharmacyHomepage() {
               >
                 <Link
                   href="/contact"
-                  className="bg-success-green hover:bg-green-600 text-white px-8 py-4 rounded-xl font-semibold inline-block"
+                  className="bg-green-600 hover:bg-green-700 text-white px-8 py-4 rounded-xl font-semibold inline-block"
                 >
                   Contact Us
                 </Link>
@@ -672,7 +667,7 @@ export default function PharmacyHomepage() {
                   href="https://wa.me/256751360385"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="border-2 border-white text-white hover:bg-white hover:text-primary-blue px-8 py-4 rounded-xl font-semibold inline-block"
+                  className="border-2 border-white text-white hover:bg-white hover:text-blue-600 px-8 py-4 rounded-xl font-semibold inline-block"
                 >
                   WhatsApp Us
                 </a>
@@ -682,8 +677,6 @@ export default function PharmacyHomepage() {
         </div>
       </section>
 
-      {/* Footer */}
-        <Footer />
-      </div>
-    );
-  }
+    </div>
+  );
+}

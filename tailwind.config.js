@@ -10,16 +10,17 @@ module.exports = {
     extend: {
 colors: {
   // high-end pharmacy palette (keys unchanged)
-  'primary-white': '#F7F6F4',  // super-cool beige for panels/backgrounds
-  'primary-blue' : '#0B4A6F',  // deep, calm teal-blue (brand primary)
-  'accent-blue'  : '#E58A3A',  // muted saffron / warm orange (CTA / accent)
-  'success-green': '#27A36E',  // healthy, trusted green (success states)
-  'light-green'  : '#E6F6EA',  // very pale green (soft surfaces / chips)
-  'neutral-gray' : '#F5F6F7',  // subtle neutral background (forms / areas)
-  'text-dark'    : '#0F1724',  // near-black charcoal for headings/body
-  'text-muted'   : '#6B7280',  // cool muted gray for secondary text
-  'border-light' : '#E6EAEE',  // cool, pale border color
-  'hover-blue'   : '#08314F',  // darker shade of primary-blue for hover
+  'primary-white': '#F3F7F6',  // soft off-white, gentle for backgrounds
+  'primary-blue' : '#14555C',  // dark teal blue, modern and calming
+  'accent-blue'  : '#C75C2E',  // deep burnt orange for bold accents/CTAs
+  'success-green': '#1E7F6B',  // rich teal-green, trusted for success
+  'light-green'  : '#D9F5EC',  // pale mint green for soft surfaces
+  'neutral-gray' : '#EAF0EF',  // subtle neutral for forms/areas
+  'text-dark'    : '#14323A',  // deep blue-charcoal for headings/body
+  'text-muted'   : '#6B8793',  // cool muted blue-gray for secondary text
+  'border-light' : '#CFE3DF',  // pale teal-gray for borders
+  'hover-blue'   : '#0C3B43',  // even darker teal for hover states
+  'dark-orange'  : '#A23B14',  // dark orange for highlights or warnings
 },
 
       fontFamily: {

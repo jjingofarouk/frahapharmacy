@@ -20,12 +20,12 @@ export async function GET() {
     
     return NextResponse.json(formattedProducts);
   } catch (error) {
-    console.error('Error fetching products:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch products' }, 
-      { status: 500 }
-    );
-  }
+  console.error('Error fetching products:', error.message, error.stack);
+  return NextResponse.json(
+    { error: 'Failed to fetch products', details: error.message }, 
+    { status: 500 }
+  );
+}
 }
 
 export async function POST(request) {

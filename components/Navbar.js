@@ -2,18 +2,15 @@
 
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { 
   ShoppingCart, 
   Menu, 
   X, 
   Search, 
   ChevronDown, 
-  Filter,
   MapPin,
   Phone,
   Star,
-  Heart,
   User
 } from 'lucide-react';
 import { useCartStore } from '@/stores/cartStore';
@@ -51,24 +48,39 @@ export default function Navbar() {
   useEffect(() => {
     const fetchData = async () => {
       try {
+        setIsLoading(true);
         const [productsRes, categoriesRes] = await Promise.all([
           fetch('/api/products'),
           fetch('/api/categories')
         ]);
         
+        if (!productsRes.ok) throw new Error('Failed to fetch products');
+        if (!categoriesRes.ok) throw new Error('Failed to fetch categories');
+        
         const productsData = await productsRes.json();
         const categoriesData = await categoriesRes.json();
         
-        if (Array.isArray(productsData)) {
+        // Handle case where API returns error object
+        if (productsData.error) {
+          console.error('Products API error:', productsData.error);
+          setProducts([]);
+        } else if (Array.isArray(productsData)) {
           setProducts(productsData);
         }
-        if (Array.isArray(categoriesData)) {
+        
+        if (categoriesData.error) {
+          console.error('Categories API error:', categoriesData.error);
+          setCategories([]);
+        } else if (Array.isArray(categoriesData)) {
           setCategories(categoriesData);
         }
       } catch (error) {
         console.error('Error fetching data:', error);
+        // Set empty arrays as fallback
         setProducts([]);
         setCategories([]);
+      } finally {
+        setIsLoading(false);
       }
     };
 
@@ -125,6 +137,7 @@ export default function Navbar() {
 
   return (
     <>
+      {/* Top Bar */}
       <div className="bg-primary-blue text-white text-sm py-2 hidden md:block">
         <div className="container mx-auto px-4 flex justify-between items-center">
           <div className="flex items-center space-x-6">
@@ -154,7 +167,7 @@ export default function Navbar() {
               </button>
               
               {showCurrencyDropdown && (
-                <div className="absolute right-0 top-full mt-2 bg-white text-text-dark rounded-lg shadow-lg border border-gray-200 z-50 w-48">
+                <div className="absolute right-0 top-full mt-2 bg-white text-gray-800 rounded-lg shadow-lg border border-gray-200 z-50 w-48">
                   <div className="py-2">
                     {CURRENCIES.map(currency => (
                       <button
@@ -177,19 +190,22 @@ export default function Navbar() {
         </div>
       </div>
 
+      {/* Main Navigation */}
       <nav className="bg-white border-b border-gray-200 sticky top-0 z-40 shadow-lg">
         <div className="container mx-auto px-4">
           <div className="flex justify-between items-center py-4">
+            {/* Logo */}
             <Link href="/" className="flex items-center space-x-3 flex-shrink-0">
               <div className="w-10 h-10 bg-primary-blue rounded-lg flex items-center justify-center">
                 <span className="text-white font-bold">F</span>
               </div>
               <div className="hidden sm:block">
-                <div className="text-xl font-bold text-text-dark">Fraha Pharmacy</div>
-                <div className="text-xs text-text-muted">Your Health Partner</div>
+                <div className="text-xl font-bold text-gray-800">Fraha Pharmacy</div>
+                <div className="text-xs text-gray-600">Your Health Partner</div>
               </div>
             </Link>
 
+            {/* Search Bar - Desktop */}
             <div className="hidden md:flex flex-1 max-w-2xl mx-8 relative" ref={searchRef}>
               <div className="w-full relative">
                 <div className="flex">
@@ -198,7 +214,7 @@ export default function Navbar() {
                     onChange={(e) => setSelectedCategory(e.target.value)}
                     className="bg-gray-50 border border-r-0 border-gray-300 rounded-l-lg px-4 py-3 text-sm focus:outline-none focus:border-primary-blue"
                   >
-                    <option value="all">All Categories</option>
+                    <option value="all">All</option>
                     {categories.map(category => (
                       <option key={category.id} value={category.id}>
                         {category.name}
@@ -209,7 +225,7 @@ export default function Navbar() {
                   <div className="relative flex-1">
                     <input
                       type="text"
-                      placeholder="Search for medicines, health products..."
+                      placeholder="Search Fraha products..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       className="w-full px-4 py-3 border-t border-b border-gray-300 focus:outline-none focus:border-primary-blue text-sm"
@@ -226,6 +242,7 @@ export default function Navbar() {
                   </button>
                 </div>
 
+                {/* Search Results Dropdown */}
                 {showSearchResults && (
                   <div 
                     ref={searchResultsRef}
@@ -244,17 +261,17 @@ export default function Navbar() {
                             className="flex items-center p-4 hover:bg-gray-50 border-b border-gray-100 last:border-b-0"
                           >
                             <img
-                              src={product.imageUrl || `https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=60&h=60&fit=crop&sig=${product.id}`}
+                              src={product.imageUrl || `/api/placeholder/60/60?text=${encodeURIComponent(product.name)}`}
                               alt={product.name}
                               className="w-12 h-12 object-cover rounded-lg mr-4"
                             />
                             <div className="flex-1">
-                              <h3 className="font-medium text-text-dark">{product.name}</h3>
-                              <p className="text-sm text-text-muted line-clamp-1">
+                              <h3 className="font-medium text-gray-800">{product.name}</h3>
+                              <p className="text-sm text-gray-600 line-clamp-1">
                                 {product.description || 'Quality medicine for your health needs'}
                               </p>
                               <div className="flex items-center justify-between mt-1">
-                                <span className="font-semibold text-success-green">
+                                <span className="font-semibold text-green-600">
                                   {formatPrice(product.price)}
                                 </span>
                                 <span className="text-xs text-gray-500">Stock: {product.stock}</span>
@@ -284,64 +301,7 @@ export default function Navbar() {
               </div>
             </div>
 
-            <div className="hidden lg:flex items-center space-x-6">
-              <Link
-                href="/products"
-                className="text-text-dark hover:text-primary-blue font-medium transition-colors duration-200"
-              >
-                Products
-              </Link>
-              
-              <div className="relative">
-                <button
-                  onMouseEnter={() => setShowCategoriesMenu(true)}
-                  onMouseLeave={() => setShowCategoriesMenu(false)}
-                  className="flex items-center space-x-1 text-text-dark hover:text-primary-blue font-medium transition-colors duration-200"
-                >
-                  <span>Categories</span>
-                  <ChevronDown size={16} />
-                </button>
-                
-                {showCategoriesMenu && (
-                  <div 
-                    className="absolute top-full left-0 mt-2 w-64 bg-white border border-gray-200 rounded-lg shadow-xl z-50"
-                    onMouseEnter={() => setShowCategoriesMenu(true)}
-                    onMouseLeave={() => setShowCategoriesMenu(false)}
-                  >
-                    <div className="py-2 max-h-80 overflow-y-auto">
-                      {categories.map(category => (
-                        <Link
-                          key={category.id}
-                          href={`/products?category=${category.id}`}
-                          className="block px-4 py-3 hover:bg-gray-50 text-text-dark hover:text-primary-blue transition-colors"
-                        >
-                          <div className="font-medium">{category.name}</div>
-                          {category.description && (
-                            <div className="text-sm text-text-muted mt-1">
-                              {category.description}
-                            </div>
-                          )}
-                        </Link>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-              
-              <Link
-                href="/about"
-                className="text-text-dark hover:text-primary-blue font-medium transition-colors duration-200"
-              >
-                About
-              </Link>
-              <Link
-                href="/contact"
-                className="text-text-dark hover:text-primary-blue font-medium transition-colors duration-200"
-              >
-                Contact
-              </Link>
-            </div>
-
+            {/* Cart and Mobile Menu */}
             <div className="flex items-center space-x-4">
               <div className="relative group">
                 <Link
@@ -364,31 +324,32 @@ export default function Navbar() {
                   )}
                 </Link>
                 
+                {/* Cart Dropdown */}
                 <div className="absolute right-0 top-full mt-2 w-80 bg-white border border-gray-200 rounded-lg shadow-xl z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
                   <div className="p-4">
-                    <h3 className="font-semibold text-text-dark mb-3">Shopping Cart</h3>
+                    <h3 className="font-semibold text-gray-800 mb-3">Shopping Cart</h3>
                     {cart.length > 0 ? (
                       <>
                         <div className="space-y-3 max-h-60 overflow-y-auto">
                           {cart.slice(0, 3).map(item => (
                             <div key={item.id} className="flex items-center space-x-3">
                               <img
-                                src={item.imageUrl || `https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=40&h=40&fit=crop&sig=${item.id}`}
+                                src={item.imageUrl || `/api/placeholder/40/40?text=${encodeURIComponent(item.name)}`}
                                 alt={item.name}
                                 className="w-10 h-10 object-cover rounded"
                               />
                               <div className="flex-1">
-                                <h4 className="text-sm font-medium text-text-dark line-clamp-1">
+                                <h4 className="text-sm font-medium text-gray-800 line-clamp-1">
                                   {item.name}
                                 </h4>
-                                <div className="text-xs text-text-muted">
+                                <div className="text-xs text-gray-600">
                                   {item.quantity} × {formatPrice(item.price)}
                                 </div>
                               </div>
                             </div>
                           ))}
                           {cart.length > 3 && (
-                            <div className="text-center text-sm text-text-muted">
+                            <div className="text-center text-sm text-gray-600">
                               +{cart.length - 3} more items
                             </div>
                           )}
@@ -396,13 +357,13 @@ export default function Navbar() {
                         <div className="border-t border-gray-200 mt-4 pt-4">
                           <div className="flex justify-between items-center mb-3">
                             <span className="font-semibold">Total:</span>
-                            <span className="font-bold text-success-green">
+                            <span className="font-bold text-green-600">
                               {formatPrice(cartTotal)}
                             </span>
                           </div>
                           <Link
                             href="/cart"
-                            className="w-full bg-success-green hover:bg-green-600 text-white text-center py-2 rounded-lg font-medium transition-colors block"
+                            className="w-full bg-green-600 hover:bg-green-700 text-white text-center py-2 rounded-lg font-medium transition-colors block"
                           >
                             View Cart
                           </Link>
@@ -411,7 +372,7 @@ export default function Navbar() {
                     ) : (
                       <div className="text-center py-8">
                         <ShoppingCart size={48} className="mx-auto mb-4 text-gray-300" />
-                        <p className="text-text-muted">Your cart is empty</p>
+                        <p className="text-gray-600">Your cart is empty</p>
                         <Link
                           href="/products"
                           className="inline-block mt-2 text-primary-blue hover:text-blue-700 font-medium"
@@ -424,6 +385,7 @@ export default function Navbar() {
                 </div>
               </div>
 
+              {/* Mobile Menu Button */}
               <button
                 className="lg:hidden p-2"
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
@@ -433,6 +395,7 @@ export default function Navbar() {
             </div>
           </div>
 
+          {/* Search Bar - Mobile */}
           <div className="md:hidden pb-4" ref={searchRef}>
             <div className="flex">
               <select
@@ -459,6 +422,7 @@ export default function Navbar() {
               </button>
             </div>
 
+            {/* Mobile Search Results */}
             {showSearchResults && (
               <div className="mt-2 bg-white border border-gray-200 rounded-lg shadow-lg max-h-80 overflow-y-auto">
                 {searchResults.length > 0 ? (
@@ -470,13 +434,13 @@ export default function Navbar() {
                       className="flex items-center p-3 hover:bg-gray-50 border-b border-gray-100 last:border-b-0"
                     >
                       <img
-                        src={product.imageUrl || `https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=40&h=40&fit=crop&sig=${product.id}`}
+                        src={product.imageUrl || `/api/placeholder/40/40?text=${encodeURIComponent(product.name)}`}
                         alt={product.name}
                         className="w-8 h-8 object-cover rounded mr-3"
                       />
                       <div className="flex-1">
-                        <h3 className="text-sm font-medium text-text-dark">{product.name}</h3>
-                        <span className="text-sm font-semibold text-success-green">
+                        <h3 className="text-sm font-medium text-gray-800">{product.name}</h3>
+                        <span className="text-sm font-semibold text-green-600">
                           {formatPrice(product.price)}
                         </span>
                       </div>
@@ -492,50 +456,37 @@ export default function Navbar() {
           </div>
         </div>
 
+        {/* Mobile Menu */}
         {isMenuOpen && (
           <div className="lg:hidden border-t border-gray-200 bg-white">
             <div className="py-4 px-4 space-y-4">
               <Link
                 href="/products"
-                className="block text-text-dark hover:text-primary-blue font-medium transition-colors duration-200"
+                className="block text-gray-800 hover:text-primary-blue font-medium transition-colors duration-200"
                 onClick={() => setIsMenuOpen(false)}
               >
                 Products
               </Link>
               
-              <div>
-                <div className="font-medium text-text-dark mb-2">Categories</div>
-                <div className="ml-4 space-y-2">
-                  {categories.slice(0, 8).map(category => (
-                    <Link
-                      key={category.id}
-                      href={`/products?category=${category.id}`}
-                      className="block text-sm text-text-muted hover:text-primary-blue transition-colors"
-                      onClick={() => setIsMenuOpen(false)}
-                    >
-                      {category.name}
-                    </Link>
-                  ))}
-                </div>
-              </div>
+
               
               <Link
                 href="/about"
-                className="block text-text-dark hover:text-primary-blue font-medium transition-colors duration-200"
+                className="block text-gray-800 hover:text-primary-blue font-medium transition-colors duration-200"
                 onClick={() => setIsMenuOpen(false)}
               >
                 About
               </Link>
               <Link
                 href="/contact"
-                className="block text-text-dark hover:text-primary-blue font-medium transition-colors duration-200"
+                className="block text-gray-800 hover:text-primary-blue font-medium transition-colors duration-200"
                 onClick={() => setIsMenuOpen(false)}
               >
                 Contact
               </Link>
               
               <div className="pt-4 border-t border-gray-200">
-                <label className="block text-sm text-text-muted mb-2">Currency:</label>
+                <label className="block text-sm text-gray-600 mb-2">Currency:</label>
                 <select
                   value={selectedCurrency}
                   onChange={(e) => setSelectedCurrency(e.target.value)}
@@ -550,7 +501,7 @@ export default function Navbar() {
               </div>
 
               <div className="pt-4 border-t border-gray-200">
-                <div className="text-sm text-text-muted space-y-2">
+                <div className="text-sm text-gray-600 space-y-2">
                   <div className="flex items-center space-x-2">
                     <Phone size={14} />
                     <span>+256 751 360 385</span>
