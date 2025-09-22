@@ -15,7 +15,7 @@ import { twMerge } from 'tailwind-merge';
 
 async function getProducts({ page = 1, search = '', category = '' }) {
   const params = new URLSearchParams({ page: page.toString(), search, category });
-  const res = await fetch(`https://frahapharmacy.vercel.app/api/products?${params}`, { cache: 'no-store' });
+  const res = await fetch(`https://frahapharmacyy.vercel.app/api/products?${params}`, { cache: 'no-store' });
   if (!res.ok) throw new Error('Failed to fetch products');
   return res.json(); // { products, totalCount }
 }

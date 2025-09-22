@@ -9,7 +9,7 @@ import Skeleton from 'react-loading-skeleton';
 import 'react-loading-skeleton/dist/skeleton.css';
 
 async function getProducts() {
-  const res = await fetch('https://frahapharmacy.vercel.app/api/products?limit=6', { cache: 'no-store' });
+  const res = await fetch('https://frahapharmacyy.vercel.app/api/products?limit=6', { cache: 'no-store' });
   if (!res.ok) throw new Error('Failed to fetch products');
   return res.json(); // { products: [...] }
 }
